@@ -73,6 +73,8 @@ var (
 	metricsPort                    = flag.String("metrics-port", "10254", "Port for the metrics endpoint.")
 	metricsEndpoint                = flag.String("metrics-endpoint", "/metrics", "Metrics endpoint.")
 	metricsPrefix                  = flag.String("metrics-prefix", "", "Prefix for the metrics.")
+	enablePProf                    = flag.Bool("enable-pprof", false, "Whether to enable the pprof endpoint.")
+	pprofPort                      = flag.String("pprof-port", "6060", "Port for the pprof endpoint.")
 	ingressClassName               = flag.String("ingress-class-name", "", "Set ingressClassName for ingress resources created.")
 	metricsLabels                  util.ArrayFlags
 	metricsJobStartLatencyBuckets  util.HistogramBuckets = util.DefaultJobStartLatencyBuckets
@@ -182,6 +184,14 @@ func main() {
 
 		glog.Info("Enabling metrics collecting and exporting to Prometheus")
 		util.InitializeMetrics(metricConfig)
+	}
+
+	if *enablePProf {
+		pprofConfig := &util.PProfConfig{
+			PProfPort: *pprofPort,
+		}
+		glog.Info("Enabling pprof")
+		util.InitializePProf(*pprofConfig)
 	}
 
 	applicationController := sparkapplication.NewController(
