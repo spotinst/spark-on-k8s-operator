@@ -45,6 +45,9 @@ type sparkAppMetrics struct {
 	sparkAppExecutorRunningCount *util.PositiveGauge
 	sparkAppExecutorFailureCount *prometheus.CounterVec
 	sparkAppExecutorSuccessCount *prometheus.CounterVec
+
+	sparkSubmitCurrentCount prometheus.Gauge
+	sparkSubmitLatency      prometheus.Summary
 }
 
 func newSparkAppMetrics(metricsConfig *util.MetricConfig) *sparkAppMetrics {
@@ -138,6 +141,16 @@ func newSparkAppMetrics(metricsConfig *util.MetricConfig) *sparkAppMetrics {
 	sparkAppExecutorRunningCount := util.NewPositiveGauge(util.CreateValidMetricNameLabel(prefix,
 		"spark_app_executor_running_count"), "Spark App Running Executor Count via the Operator", validLabels)
 
+	sparkSubmitLatency := prometheus.NewSummary(prometheus.SummaryOpts{
+		Name: util.CreateValidMetricNameLabel(prefix, "spark_submit_latency_seconds"),
+		Help: "Latency of Spark Submit operations in seconds",
+	})
+
+	sparkSubmitCurrentCount := prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: util.CreateValidMetricNameLabel(prefix, "spark_submit_current_count"),
+		Help: "Current number of Spark Submit run by the Operator",
+	})
+
 	return &sparkAppMetrics{
 		labels:                        validLabels,
 		prefix:                        prefix,
@@ -154,6 +167,8 @@ func newSparkAppMetrics(metricsConfig *util.MetricConfig) *sparkAppMetrics {
 		sparkAppExecutorRunningCount:  sparkAppExecutorRunningCount,
 		sparkAppExecutorSuccessCount:  sparkAppExecutorSuccessCount,
 		sparkAppExecutorFailureCount:  sparkAppExecutorFailureCount,
+		sparkSubmitCurrentCount:       sparkSubmitCurrentCount,
+		sparkSubmitLatency:            sparkSubmitLatency,
 	}
 }
 
@@ -170,6 +185,8 @@ func (sm *sparkAppMetrics) registerMetrics() {
 	util.RegisterMetric(sm.sparkAppExecutorFailureCount)
 	sm.sparkAppRunningCount.Register()
 	sm.sparkAppExecutorRunningCount.Register()
+	util.RegisterMetric(sm.sparkSubmitLatency)
+	util.RegisterMetric(sm.sparkSubmitCurrentCount)
 }
 
 func (sm *sparkAppMetrics) exportMetricsOnDelete(oldApp *v1beta2.SparkApplication) {
