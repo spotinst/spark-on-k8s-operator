@@ -1,0 +1,50 @@
+name: 'Release Action'
+description: 'Build and Push the application docker image'
+
+inputs:
+    aws-access-key-id:
+      description: 'AWS Access Key ID'
+      required: true
+    aws-secret-access-key:
+      description: 'AWS Secret Access Key'
+      required: true
+    public-registry-id:
+      description: 'Public ECR Registry ID'
+      required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Get branch names
+      id: branch-name
+      uses: tj-actions/branch-names@v5
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Login to Amazon ECR
+      uses: docker/login-action@v1
+      with:
+        registry: public.ecr.aws
+        username: ${{ inputs.aws-access-key-id }}
+        password: ${{ inputs.aws-secret-access-key }}
+
+    - name: Build images
+      run: make -f .github/actions/release/Makefile build
+      shell: bash
+      env:
+        REGISTRY: public.ecr.aws/${{ inputs.public-registry-id }}/
+
+    - name: Push images
+      run: make -f .github/actions/release/Makefile push
+      shell: bash
+      env:
+        BRANCH: ${{ steps.branch-name.outputs.current_branch }}
+        REGISTRY: public.ecr.aws/${{ inputs.public-registry-id }}/
+
+    - name: Display exported images
+      run: make -f .github/actions/release/Makefile show
+      shell: bash
+      env:
+        BRANCH: ${{ steps.branch-name.outputs.current_branch }}
+        REGISTRY: public.ecr.aws/${{ inputs.public-registry-id }}/
