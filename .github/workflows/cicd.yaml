@@ -1,0 +1,61 @@
+name: CICD
+on:
+  push:
+    branches:
+      - ocean-spark
+  pull_request:
+    branches:
+      - ocean-spark
+
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/setup-go
+
+      - name: Run gofmt check
+        run: make fmt-check
+
+      - name: Run static analysis
+        run: make static-analysis
+
+      - name: Run unit tests
+        run: make unit-test
+
+  cd-dev:
+    needs: [ci]
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - if: ${{ github.event_name != 'pull_request' }}
+        uses: actions/checkout@v3
+
+      - if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: release to dev
+        uses: ./.github/actions/release
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          public-registry-id: n8e8v3t5
+
+  cd-prod:
+    if: ${{ github.event_name != 'pull_request' }}
+    needs: [cd-dev]
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: release to prod
+        uses: ./.github/actions/release
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          public-registry-id: f4k1p1n4
