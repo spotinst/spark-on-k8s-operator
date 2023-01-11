@@ -43,7 +43,7 @@ func (c Capabilities) String() string {
 func getPreferredAvailableAPIs(client kubernetes.Interface, kind string) (Capabilities, error) {
 	discoveryclient := client.Discovery()
 	lists, err := discoveryclient.ServerPreferredResources()
-	if err != nil {
+	if len(lists) == 0 && err != nil {
 		return nil, err
 	}
 
