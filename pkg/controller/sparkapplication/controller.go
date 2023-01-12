@@ -24,7 +24,6 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/uuid"
-	"golang.org/x/time/rate"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -95,6 +94,7 @@ func NewController(
 	batchSchedulerMgr *batchscheduler.SchedulerManager,
 	enableUIService bool,
 	disableExecutorReporting bool,
+	ratelimitCfg util.RatelimitConfig,
 ) *Controller {
 	crdscheme.AddToScheme(scheme.Scheme)
 
@@ -105,7 +105,7 @@ func NewController(
 	})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, apiv1.EventSource{Component: "spark-operator"})
 
-	return newSparkApplicationController(crdClient, kubeClient, crdInformerFactory, podInformerFactory, recorder, metricsConfig, ingressURLFormat, ingressClassName, batchSchedulerMgr, enableUIService, disableExecutorReporting)
+	return newSparkApplicationController(crdClient, kubeClient, crdInformerFactory, podInformerFactory, recorder, metricsConfig, ingressURLFormat, ingressClassName, batchSchedulerMgr, enableUIService, disableExecutorReporting, ratelimitCfg)
 }
 
 func newSparkApplicationController(
@@ -120,9 +120,9 @@ func newSparkApplicationController(
 	batchSchedulerMgr *batchscheduler.SchedulerManager,
 	enableUIService bool,
 	disableExecutorReporting bool,
+	ratelimitCfg util.RatelimitConfig,
 ) *Controller {
-	queue := workqueue.NewNamedRateLimitingQueue(&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(queueTokenRefillRate), queueTokenBucketSize)},
-		"spark-application-controller")
+	queue := util.CreateNamedRateLimitingQueue("spark-application-controller", ratelimitCfg)
 
 	controller := &Controller{
 		crdClient:                crdClient,
