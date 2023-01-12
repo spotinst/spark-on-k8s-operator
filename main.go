@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"golang.org/x/time/rate"
 	apiv1 "k8s.io/api/core/v1"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -77,6 +78,9 @@ var (
 	pprofPort                      = flag.String("pprof-port", "6060", "Port for the pprof endpoint.")
 	ingressClassName               = flag.String("ingress-class-name", "", "Set ingressClassName for ingress resources created.")
 	disableExecutorReporting       = flag.Bool("disable-executor-reporting", false, "Disable Executors State Reporting in the SparkApplication Custom Resource")
+	workqueueTokenRefillRate       = flag.Int("workqueue-token-refill-rate", 50, "")
+	workqueueTokenBucketSize       = flag.Int("workqueue-token-bucket-size", 500, "")
+	workqueueMaxDelay              = flag.Duration("workqueue-max-delay", rate.InfDuration, "")
 	metricsLabels                  util.ArrayFlags
 	metricsJobStartLatencyBuckets  util.HistogramBuckets = util.DefaultJobStartLatencyBuckets
 )
@@ -195,8 +199,14 @@ func main() {
 		util.InitializePProf(*pprofConfig)
 	}
 
+	workqueueRateLimitCfg := util.RatelimitConfig{
+		QueueTokenRefillRate: *workqueueTokenRefillRate,
+		QueueTokenBucketSize: *workqueueTokenBucketSize,
+		MaxDelay:             *workqueueMaxDelay,
+	}
+
 	applicationController := sparkapplication.NewController(
-		crClient, kubeClient, crInformerFactory, podInformerFactory, metricConfig, *namespace, *ingressURLFormat, *ingressClassName, batchSchedulerMgr, *enableUIService, *disableExecutorReporting)
+		crClient, kubeClient, crInformerFactory, podInformerFactory, metricConfig, *namespace, *ingressURLFormat, *ingressClassName, batchSchedulerMgr, *enableUIService, *disableExecutorReporting, workqueueRateLimitCfg)
 	scheduledApplicationController := scheduledsparkapplication.NewController(
 		crClient, kubeClient, apiExtensionsClient, crInformerFactory, clock.RealClock{})
 
