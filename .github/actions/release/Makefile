@@ -3,8 +3,8 @@ BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
 
 VERSION = $(shell git rev-parse --short=7 HEAD)
 IMAGE_NAME = spark-operator
-SPARK_BASE_IMAGE = gcr.io/datamechanics/spark:platform-3.2.1-dm18
-TAG = $(VERSION)-dm18
+SPARK_BASE_IMAGE = gcr.io/ocean-spark/spark:platform-3.2-gen19
+TAG = $(VERSION)-gen19
 
 build:
 	docker buildx build --load \
