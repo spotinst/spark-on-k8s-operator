@@ -76,6 +76,7 @@ var (
 	enablePProf                    = flag.Bool("enable-pprof", false, "Whether to enable the pprof endpoint.")
 	pprofPort                      = flag.String("pprof-port", "6060", "Port for the pprof endpoint.")
 	ingressClassName               = flag.String("ingress-class-name", "", "Set ingressClassName for ingress resources created.")
+	disableExecutorReporting       = flag.Bool("disable-executor-reporting", false, "Disable Executors State Reporting in the SparkApplication Custom Resource")
 	metricsLabels                  util.ArrayFlags
 	metricsJobStartLatencyBuckets  util.HistogramBuckets = util.DefaultJobStartLatencyBuckets
 )
@@ -195,7 +196,7 @@ func main() {
 	}
 
 	applicationController := sparkapplication.NewController(
-		crClient, kubeClient, crInformerFactory, podInformerFactory, metricConfig, *namespace, *ingressURLFormat, *ingressClassName, batchSchedulerMgr, *enableUIService)
+		crClient, kubeClient, crInformerFactory, podInformerFactory, metricConfig, *namespace, *ingressURLFormat, *ingressClassName, batchSchedulerMgr, *enableUIService, *disableExecutorReporting)
 	scheduledApplicationController := scheduledsparkapplication.NewController(
 		crClient, kubeClient, apiExtensionsClient, crInformerFactory, clock.RealClock{})
 

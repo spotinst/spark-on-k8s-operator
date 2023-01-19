@@ -67,18 +67,19 @@ var (
 
 // Controller manages instances of SparkApplication.
 type Controller struct {
-	crdClient         crdclientset.Interface
-	kubeClient        clientset.Interface
-	queue             workqueue.RateLimitingInterface
-	cacheSynced       cache.InformerSynced
-	recorder          record.EventRecorder
-	metrics           *sparkAppMetrics
-	applicationLister crdlisters.SparkApplicationLister
-	podLister         v1.PodLister
-	ingressURLFormat  string
-	ingressClassName  string
-	batchSchedulerMgr *batchscheduler.SchedulerManager
-	enableUIService   bool
+	crdClient                crdclientset.Interface
+	kubeClient               clientset.Interface
+	queue                    workqueue.RateLimitingInterface
+	cacheSynced              cache.InformerSynced
+	recorder                 record.EventRecorder
+	metrics                  *sparkAppMetrics
+	applicationLister        crdlisters.SparkApplicationLister
+	podLister                v1.PodLister
+	ingressURLFormat         string
+	ingressClassName         string
+	batchSchedulerMgr        *batchscheduler.SchedulerManager
+	enableUIService          bool
+	disableExecutorReporting bool
 }
 
 // NewController creates a new Controller.
@@ -92,7 +93,9 @@ func NewController(
 	ingressURLFormat string,
 	ingressClassName string,
 	batchSchedulerMgr *batchscheduler.SchedulerManager,
-	enableUIService bool) *Controller {
+	enableUIService bool,
+	disableExecutorReporting bool,
+) *Controller {
 	crdscheme.AddToScheme(scheme.Scheme)
 
 	eventBroadcaster := record.NewBroadcaster()
@@ -102,7 +105,7 @@ func NewController(
 	})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, apiv1.EventSource{Component: "spark-operator"})
 
-	return newSparkApplicationController(crdClient, kubeClient, crdInformerFactory, podInformerFactory, recorder, metricsConfig, ingressURLFormat, ingressClassName, batchSchedulerMgr, enableUIService)
+	return newSparkApplicationController(crdClient, kubeClient, crdInformerFactory, podInformerFactory, recorder, metricsConfig, ingressURLFormat, ingressClassName, batchSchedulerMgr, enableUIService, disableExecutorReporting)
 }
 
 func newSparkApplicationController(
@@ -115,19 +118,22 @@ func newSparkApplicationController(
 	ingressURLFormat string,
 	ingressClassName string,
 	batchSchedulerMgr *batchscheduler.SchedulerManager,
-	enableUIService bool) *Controller {
+	enableUIService bool,
+	disableExecutorReporting bool,
+) *Controller {
 	queue := workqueue.NewNamedRateLimitingQueue(&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(queueTokenRefillRate), queueTokenBucketSize)},
 		"spark-application-controller")
 
 	controller := &Controller{
-		crdClient:         crdClient,
-		kubeClient:        kubeClient,
-		recorder:          eventRecorder,
-		queue:             queue,
-		ingressURLFormat:  ingressURLFormat,
-		ingressClassName:  ingressClassName,
-		batchSchedulerMgr: batchSchedulerMgr,
-		enableUIService:   enableUIService,
+		crdClient:                crdClient,
+		kubeClient:               kubeClient,
+		recorder:                 eventRecorder,
+		queue:                    queue,
+		ingressURLFormat:         ingressURLFormat,
+		ingressClassName:         ingressClassName,
+		batchSchedulerMgr:        batchSchedulerMgr,
+		enableUIService:          enableUIService,
+		disableExecutorReporting: disableExecutorReporting,
 	}
 
 	if metricsConfig != nil {
@@ -144,7 +150,7 @@ func newSparkApplicationController(
 	controller.applicationLister = crdInformer.Lister()
 
 	podsInformer := podInformerFactory.Core().V1().Pods()
-	sparkPodEventHandler := newSparkPodEventHandler(controller.queue.AddRateLimited, controller.applicationLister)
+	sparkPodEventHandler := newSparkPodEventHandler(controller.queue.AddRateLimited, controller.applicationLister, disableExecutorReporting)
 	podsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sparkPodEventHandler.onPodAdded,
 		UpdateFunc: sparkPodEventHandler.onPodUpdated,
@@ -365,6 +371,10 @@ func (c *Controller) getAndUpdateDriverState(app *v1beta2.SparkApplication) erro
 // getAndUpdateExecutorState lists the executor pods of the application
 // and updates the executor state based on the current phase of the pods.
 func (c *Controller) getAndUpdateExecutorState(app *v1beta2.SparkApplication) error {
+	if c.disableExecutorReporting {
+		return nil
+	}
+
 	pods, err := c.getExecutorPods(app)
 	if err != nil {
 		return err

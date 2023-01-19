@@ -24,6 +24,7 @@ import (
 
 	crdlisters "github.com/GoogleCloudPlatform/spark-on-k8s-operator/pkg/client/listers/sparkoperator.k8s.io/v1beta2"
 	"github.com/GoogleCloudPlatform/spark-on-k8s-operator/pkg/config"
+	"github.com/GoogleCloudPlatform/spark-on-k8s-operator/pkg/util"
 )
 
 // sparkPodEventHandler monitors Spark executor pods and update the SparkApplication objects accordingly.
@@ -31,13 +32,20 @@ type sparkPodEventHandler struct {
 	applicationLister crdlisters.SparkApplicationLister
 	// call-back function to enqueue SparkApp key for processing.
 	enqueueFunc func(appKey interface{})
+
+	filterFunc func(pod *apiv1.Pod) bool
 }
 
 // newSparkPodEventHandler creates a new sparkPodEventHandler instance.
-func newSparkPodEventHandler(enqueueFunc func(appKey interface{}), lister crdlisters.SparkApplicationLister) *sparkPodEventHandler {
+func newSparkPodEventHandler(enqueueFunc func(appKey interface{}), lister crdlisters.SparkApplicationLister, disableExecutorReporting bool) *sparkPodEventHandler {
 	monitor := &sparkPodEventHandler{
 		enqueueFunc:       enqueueFunc,
 		applicationLister: lister,
+		filterFunc:        func(pod *apiv1.Pod) bool { return true },
+	}
+
+	if disableExecutorReporting {
+		monitor.filterFunc = util.IsDriverPod
 	}
 	return monitor
 }
@@ -81,6 +89,10 @@ func (s *sparkPodEventHandler) onPodDeleted(obj interface{}) {
 func (s *sparkPodEventHandler) enqueueSparkAppForUpdate(pod *apiv1.Pod) {
 	appName, exists := getAppName(pod)
 	if !exists {
+		return
+	}
+
+	if !s.filterFunc(pod) {
 		return
 	}
 
