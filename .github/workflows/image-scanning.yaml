@@ -1,0 +1,26 @@
+name: Scan DP images
+on:
+  schedule:
+  - cron: '0 0 * * 1'
+
+jobs:
+  trivy_scanning:
+    runs-on: self-hosted
+    name: Trivy scan
+    steps:
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'public.ecr.aws/ocean-spark/spark-operator:ocean-spark'
+          format: 'sarif'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          security-checks: 'vuln'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
