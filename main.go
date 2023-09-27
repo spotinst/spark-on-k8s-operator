@@ -81,6 +81,7 @@ var (
 	workqueueTokenRefillRate       = flag.Int("workqueue-token-refill-rate", 50, "")
 	workqueueTokenBucketSize       = flag.Int("workqueue-token-bucket-size", 500, "")
 	workqueueMaxDelay              = flag.Duration("workqueue-max-delay", rate.InfDuration, "")
+	executorsProcessingLimit       = flag.Int("executors-processing-limit", 5000, "Limit the number of executors that the spark-operator processes")
 	metricsLabels                  util.ArrayFlags
 	metricsJobStartLatencyBuckets  util.HistogramBuckets = util.DefaultJobStartLatencyBuckets
 )
@@ -206,7 +207,7 @@ func main() {
 	}
 
 	applicationController := sparkapplication.NewController(
-		crClient, kubeClient, crInformerFactory, podInformerFactory, metricConfig, *namespace, *ingressURLFormat, *ingressClassName, batchSchedulerMgr, *enableUIService, *disableExecutorReporting, workqueueRateLimitCfg)
+		crClient, kubeClient, crInformerFactory, podInformerFactory, metricConfig, *namespace, *ingressURLFormat, *ingressClassName, batchSchedulerMgr, *enableUIService, *disableExecutorReporting, workqueueRateLimitCfg, *executorsProcessingLimit)
 	scheduledApplicationController := scheduledsparkapplication.NewController(
 		crClient, kubeClient, apiExtensionsClient, crInformerFactory, clock.RealClock{})
 

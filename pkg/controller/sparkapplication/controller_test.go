@@ -68,7 +68,7 @@ func newFakeController(app *v1beta2.SparkApplication, pods ...*apiv1.Pod) (*Cont
 
 	podInformerFactory := informers.NewSharedInformerFactory(kubeClient, 0*time.Second)
 	controller := newSparkApplicationController(crdClient, kubeClient, informerFactory, podInformerFactory, recorder,
-		&util.MetricConfig{}, "", "", nil, true, false, util.RatelimitConfig{})
+		&util.MetricConfig{}, "", "", nil, true, false, util.RatelimitConfig{}, 5)
 
 	informer := informerFactory.Sparkoperator().V1beta2().SparkApplications().Informer()
 	if app != nil {
@@ -1453,6 +1453,107 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			expectedAppState:        v1beta2.RunningState,
 			expectedExecutorState:   map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorUnknownState},
 			expectedAppMetrics:      metrics{},
+			expectedExecutorMetrics: executorMetrics{},
+		},
+		{
+			appName:      appName,
+			oldAppStatus: v1beta2.SubmittedState,
+			oldExecutorStatus: map[string]v1beta2.ExecutorState{
+				"exec-1": v1beta2.ExecutorRunningState,
+				"exec-2": v1beta2.ExecutorRunningState,
+				"exec-3": v1beta2.ExecutorRunningState,
+				"exec-4": v1beta2.ExecutorRunningState,
+				"exec-5": v1beta2.ExecutorRunningState,
+			},
+			driverPod: &apiv1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      driverPodName,
+					Namespace: "test",
+					Labels: map[string]string{
+						config.SparkRoleLabel:    config.SparkDriverRole,
+						config.SparkAppNameLabel: appName,
+					},
+					ResourceVersion: "1",
+				},
+				Status: apiv1.PodStatus{
+					Phase: apiv1.PodRunning,
+				},
+			},
+			executorPod: &apiv1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "exec-6",
+					Namespace: "test",
+					Labels: map[string]string{
+						config.SparkRoleLabel:       config.SparkExecutorRole,
+						config.SparkAppNameLabel:    appName,
+						config.SparkExecutorIDLabel: "6",
+					},
+				},
+				Status: apiv1.PodStatus{
+					Phase: apiv1.PodPending,
+				},
+			},
+			expectedAppState: v1beta2.RunningState,
+			expectedExecutorState: map[string]v1beta2.ExecutorState{
+				"exec-1": v1beta2.ExecutorUnknownState,
+				"exec-2": v1beta2.ExecutorUnknownState,
+				"exec-3": v1beta2.ExecutorUnknownState,
+				"exec-4": v1beta2.ExecutorUnknownState,
+				"exec-5": v1beta2.ExecutorUnknownState,
+			},
+			expectedAppMetrics: metrics{
+				runningMetricCount: 1,
+			},
+			expectedExecutorMetrics: executorMetrics{},
+		},
+		{
+			appName:      appName,
+			oldAppStatus: v1beta2.SubmittedState,
+			oldExecutorStatus: map[string]v1beta2.ExecutorState{
+				"exec-1": v1beta2.ExecutorRunningState,
+				"exec-2": v1beta2.ExecutorRunningState,
+				"exec-3": v1beta2.ExecutorRunningState,
+				"exec-4": v1beta2.ExecutorRunningState,
+			},
+			driverPod: &apiv1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      driverPodName,
+					Namespace: "test",
+					Labels: map[string]string{
+						config.SparkRoleLabel:    config.SparkDriverRole,
+						config.SparkAppNameLabel: appName,
+					},
+					ResourceVersion: "1",
+				},
+				Status: apiv1.PodStatus{
+					Phase: apiv1.PodRunning,
+				},
+			},
+			executorPod: &apiv1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "exec-5",
+					Namespace: "test",
+					Labels: map[string]string{
+						config.SparkRoleLabel:       config.SparkExecutorRole,
+						config.SparkAppNameLabel:    appName,
+						config.SparkExecutorIDLabel: "5",
+					},
+				},
+				Status: apiv1.PodStatus{
+					Phase: apiv1.PodPending,
+				},
+			},
+			expectedAppState: v1beta2.RunningState,
+			expectedExecutorState: map[string]v1beta2.ExecutorState{
+				"exec-1": v1beta2.ExecutorUnknownState,
+				"exec-2": v1beta2.ExecutorUnknownState,
+				"exec-3": v1beta2.ExecutorUnknownState,
+				"exec-4": v1beta2.ExecutorUnknownState,
+				"exec-5": v1beta2.ExecutorPendingState,
+			},
+			expectedAppMetrics: metrics{
+				runningMetricCount: 1,
+			},
 			expectedExecutorMetrics: executorMetrics{},
 		},
 	}
