@@ -926,6 +926,7 @@ func TestSyncSparkApplication_SubmissionSuccess(t *testing.T) {
 
 func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 	type testcase struct {
+		name                    string
 		appName                 string
 		oldAppStatus            v1beta2.ApplicationStateType
 		oldExecutorStatus       map[string]v1beta2.ExecutorState
@@ -967,6 +968,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 
 	testcases := []testcase{
 		{
+			name:                  appName,
 			appName:               appName,
 			oldAppStatus:          v1beta2.SubmittedState,
 			oldExecutorStatus:     map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorRunningState},
@@ -980,6 +982,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			},
 		},
 		{
+			name:              appName,
 			appName:           appName,
 			oldAppStatus:      v1beta2.SubmittedState,
 			oldExecutorStatus: map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorRunningState},
@@ -1021,6 +1024,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			},
 		},
 		{
+			name:              appName,
 			appName:           appName,
 			oldAppStatus:      v1beta2.RunningState,
 			oldExecutorStatus: map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorRunningState},
@@ -1076,6 +1080,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			},
 		},
 		{
+			name:              appName,
 			appName:           appName,
 			oldAppStatus:      v1beta2.RunningState,
 			oldExecutorStatus: map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorRunningState},
@@ -1133,6 +1138,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			},
 		},
 		{
+			name:              appName,
 			appName:           appName,
 			oldAppStatus:      v1beta2.RunningState,
 			oldExecutorStatus: map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorRunningState},
@@ -1191,6 +1197,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			},
 		},
 		{
+			name:              appName,
 			appName:           appName,
 			oldAppStatus:      v1beta2.RunningState,
 			oldExecutorStatus: map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorRunningState},
@@ -1254,6 +1261,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			},
 		},
 		{
+			name:              appName,
 			appName:           appName,
 			oldAppStatus:      v1beta2.RunningState,
 			oldExecutorStatus: map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorRunningState},
@@ -1314,6 +1322,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			},
 		},
 		{
+			name:                    appName,
 			appName:                 appName,
 			oldAppStatus:            v1beta2.FailingState,
 			oldExecutorStatus:       map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorFailedState},
@@ -1323,6 +1332,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			expectedExecutorMetrics: executorMetrics{},
 		},
 		{
+			name:              appName,
 			appName:           appName,
 			oldAppStatus:      v1beta2.RunningState,
 			oldExecutorStatus: map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorRunningState},
@@ -1364,6 +1374,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			},
 		},
 		{
+			name:                    appName,
 			appName:                 appName,
 			oldAppStatus:            v1beta2.SucceedingState,
 			oldExecutorStatus:       map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorCompletedState},
@@ -1373,6 +1384,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			expectedExecutorMetrics: executorMetrics{},
 		},
 		{
+			name:              appName,
 			appName:           appName,
 			oldAppStatus:      v1beta2.SubmittedState,
 			oldExecutorStatus: map[string]v1beta2.ExecutorState{},
@@ -1408,6 +1420,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			expectedExecutorMetrics: executorMetrics{},
 		},
 		{
+			name:              appName,
 			appName:           appName,
 			oldAppStatus:      v1beta2.CompletedState,
 			oldExecutorStatus: map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorPendingState},
@@ -1433,6 +1446,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			},
 		},
 		{
+			name:              appName,
 			appName:           appName,
 			oldAppStatus:      v1beta2.RunningState,
 			oldExecutorStatus: map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorRunningState},
@@ -1456,6 +1470,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			expectedExecutorMetrics: executorMetrics{},
 		},
 		{
+			name:         appName,
 			appName:      appName,
 			oldAppStatus: v1beta2.SubmittedState,
 			oldExecutorStatus: map[string]v1beta2.ExecutorState{
@@ -1507,6 +1522,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			expectedExecutorMetrics: executorMetrics{},
 		},
 		{
+			name:         "when_executorsProcessingLimit_isSet_then_disableExecutorProcessing",
 			appName:      appName,
 			oldAppStatus: v1beta2.SubmittedState,
 			oldExecutorStatus: map[string]v1beta2.ExecutorState{
@@ -1607,7 +1623,9 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 	}
 
 	for _, test := range testcases {
-		testFn(test, t)
+		t.Run(test.name, func(tt *testing.T) {
+			testFn(test, tt)
+		})
 	}
 }
 

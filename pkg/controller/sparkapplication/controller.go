@@ -388,32 +388,31 @@ func (c *Controller) getAndUpdateExecutorState(app *v1beta2.SparkApplication) er
 	executorStateMap := make(map[string]v1beta2.ExecutorState)
 	var executorApplicationID string
 	for _, pod := range pods {
-		if util.IsExecutorPod(pod) {
-			// If the executor number is higher than the `executorsProcessingLimit` we want to stop persisting executors
-			if executorID, _ := strconv.Atoi(getSparkExecutorID(pod)); executorID <= c.executorsProcessingLimit {
-				newState := podPhaseToExecutorState(pod.Status.Phase)
-				oldState, exists := app.Status.ExecutorState[pod.Name]
-				// Only record an executor event if the executor state is new or it has changed.
-				if !exists || newState != oldState {
-					if newState == v1beta2.ExecutorFailedState {
-						execContainerState := getExecutorContainerTerminatedState(pod.Status)
-						if execContainerState != nil {
-							c.recordExecutorEvent(app, newState, pod.Name, execContainerState.ExitCode, execContainerState.Reason)
-						} else {
-							// If we can't find the container state,
-							// we need to set the exitCode and the Reason to unambiguous values.
-							c.recordExecutorEvent(app, newState, pod.Name, -1, "Unknown (Container not Found)")
-						}
-					} else {
-						c.recordExecutorEvent(app, newState, pod.Name)
-					}
+		// If the executor number is higher than the `executorsProcessingLimit` we want to stop persisting executors
+		if executorID, _ := strconv.Atoi(getSparkExecutorID(pod)); executorID > c.executorsProcessingLimit {
+			continue
+		}
+		newState := podPhaseToExecutorState(pod.Status.Phase)
+		oldState, exists := app.Status.ExecutorState[pod.Name]
+		// Only record an executor event if the executor state is new or it has changed.
+		if !exists || newState != oldState {
+			if newState == v1beta2.ExecutorFailedState {
+				execContainerState := getExecutorContainerTerminatedState(pod.Status)
+				if execContainerState != nil {
+					c.recordExecutorEvent(app, newState, pod.Name, execContainerState.ExitCode, execContainerState.Reason)
+				} else {
+					// If we can't find the container state,
+					// we need to set the exitCode and the Reason to unambiguous values.
+					c.recordExecutorEvent(app, newState, pod.Name, -1, "Unknown (Container not Found)")
 				}
-				executorStateMap[pod.Name] = newState
-
-				if executorApplicationID == "" {
-					executorApplicationID = getSparkApplicationID(pod)
-				}
+			} else {
+				c.recordExecutorEvent(app, newState, pod.Name)
 			}
+		}
+		executorStateMap[pod.Name] = newState
+
+		if executorApplicationID == "" {
+			executorApplicationID = getSparkApplicationID(pod)
 		}
 	}
 
