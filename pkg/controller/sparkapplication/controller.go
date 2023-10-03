@@ -389,7 +389,7 @@ func (c *Controller) getAndUpdateExecutorState(app *v1beta2.SparkApplication) er
 	var executorApplicationID string
 	for _, pod := range pods {
 		if util.IsExecutorPod(pod) {
-			//if the executor number is higher than the `executorsProcessingLimit` we want to stop persisting executors
+			// If the executor number is higher than the `executorsProcessingLimit` we want to stop persisting executors
 			if executorID, _ := strconv.Atoi(getSparkExecutorID(pod)); executorID <= c.executorsProcessingLimit {
 				newState := podPhaseToExecutorState(pod.Status.Phase)
 				oldState, exists := app.Status.ExecutorState[pod.Name]
