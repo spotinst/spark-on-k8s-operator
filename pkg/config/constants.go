@@ -54,6 +54,8 @@ const (
 	SparkExecutorRole = "executor"
 	// SubmissionIDLabel is the label that records the submission ID of the current run of an application.
 	SubmissionIDLabel = LabelAnnotationPrefix + "submission-id"
+	// SparkExecutorIDLabel is the label that records executor pod ID
+	SparkExecutorIDLabel = "spark-exec-id"
 )
 
 const (

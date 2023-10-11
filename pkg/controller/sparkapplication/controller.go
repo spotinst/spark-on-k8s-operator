@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"strconv"
 	"time"
 
 	"github.com/golang/glog"
@@ -79,6 +80,7 @@ type Controller struct {
 	batchSchedulerMgr        *batchscheduler.SchedulerManager
 	enableUIService          bool
 	disableExecutorReporting bool
+	executorsProcessingLimit int
 }
 
 // NewController creates a new Controller.
@@ -95,6 +97,7 @@ func NewController(
 	enableUIService bool,
 	disableExecutorReporting bool,
 	ratelimitCfg util.RatelimitConfig,
+	executorsProcessingLimit int,
 ) *Controller {
 	crdscheme.AddToScheme(scheme.Scheme)
 
@@ -105,7 +108,7 @@ func NewController(
 	})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, apiv1.EventSource{Component: "spark-operator"})
 
-	return newSparkApplicationController(crdClient, kubeClient, crdInformerFactory, podInformerFactory, recorder, metricsConfig, ingressURLFormat, ingressClassName, batchSchedulerMgr, enableUIService, disableExecutorReporting, ratelimitCfg)
+	return newSparkApplicationController(crdClient, kubeClient, crdInformerFactory, podInformerFactory, recorder, metricsConfig, ingressURLFormat, ingressClassName, batchSchedulerMgr, enableUIService, disableExecutorReporting, ratelimitCfg, executorsProcessingLimit)
 }
 
 func newSparkApplicationController(
@@ -121,6 +124,7 @@ func newSparkApplicationController(
 	enableUIService bool,
 	disableExecutorReporting bool,
 	ratelimitCfg util.RatelimitConfig,
+	executorsProcessingLimit int,
 ) *Controller {
 	queue := util.CreateNamedRateLimitingQueue("spark-application-controller", ratelimitCfg)
 
@@ -134,6 +138,7 @@ func newSparkApplicationController(
 		batchSchedulerMgr:        batchSchedulerMgr,
 		enableUIService:          enableUIService,
 		disableExecutorReporting: disableExecutorReporting,
+		executorsProcessingLimit: executorsProcessingLimit,
 	}
 
 	if metricsConfig != nil {
@@ -383,29 +388,31 @@ func (c *Controller) getAndUpdateExecutorState(app *v1beta2.SparkApplication) er
 	executorStateMap := make(map[string]v1beta2.ExecutorState)
 	var executorApplicationID string
 	for _, pod := range pods {
-		if util.IsExecutorPod(pod) {
-			newState := podPhaseToExecutorState(pod.Status.Phase)
-			oldState, exists := app.Status.ExecutorState[pod.Name]
-			// Only record an executor event if the executor state is new or it has changed.
-			if !exists || newState != oldState {
-				if newState == v1beta2.ExecutorFailedState {
-					execContainerState := getExecutorContainerTerminatedState(pod.Status)
-					if execContainerState != nil {
-						c.recordExecutorEvent(app, newState, pod.Name, execContainerState.ExitCode, execContainerState.Reason)
-					} else {
-						// If we can't find the container state,
-						// we need to set the exitCode and the Reason to unambiguous values.
-						c.recordExecutorEvent(app, newState, pod.Name, -1, "Unknown (Container not Found)")
-					}
+		// If the executor number is higher than the `executorsProcessingLimit` we want to stop persisting executors
+		if executorID, _ := strconv.Atoi(getSparkExecutorID(pod)); executorID > c.executorsProcessingLimit {
+			continue
+		}
+		newState := podPhaseToExecutorState(pod.Status.Phase)
+		oldState, exists := app.Status.ExecutorState[pod.Name]
+		// Only record an executor event if the executor state is new or it has changed.
+		if !exists || newState != oldState {
+			if newState == v1beta2.ExecutorFailedState {
+				execContainerState := getExecutorContainerTerminatedState(pod.Status)
+				if execContainerState != nil {
+					c.recordExecutorEvent(app, newState, pod.Name, execContainerState.ExitCode, execContainerState.Reason)
 				} else {
-					c.recordExecutorEvent(app, newState, pod.Name)
+					// If we can't find the container state,
+					// we need to set the exitCode and the Reason to unambiguous values.
+					c.recordExecutorEvent(app, newState, pod.Name, -1, "Unknown (Container not Found)")
 				}
+			} else {
+				c.recordExecutorEvent(app, newState, pod.Name)
 			}
-			executorStateMap[pod.Name] = newState
+		}
+		executorStateMap[pod.Name] = newState
 
-			if executorApplicationID == "" {
-				executorApplicationID = getSparkApplicationID(pod)
-			}
+		if executorApplicationID == "" {
+			executorApplicationID = getSparkApplicationID(pod)
 		}
 	}
 

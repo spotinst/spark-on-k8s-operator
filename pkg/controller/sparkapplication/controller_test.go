@@ -68,7 +68,7 @@ func newFakeController(app *v1beta2.SparkApplication, pods ...*apiv1.Pod) (*Cont
 
 	podInformerFactory := informers.NewSharedInformerFactory(kubeClient, 0*time.Second)
 	controller := newSparkApplicationController(crdClient, kubeClient, informerFactory, podInformerFactory, recorder,
-		&util.MetricConfig{}, "", "", nil, true, false, util.RatelimitConfig{})
+		&util.MetricConfig{}, "", "", nil, true, false, util.RatelimitConfig{}, 5)
 
 	informer := informerFactory.Sparkoperator().V1beta2().SparkApplications().Informer()
 	if app != nil {
@@ -926,6 +926,7 @@ func TestSyncSparkApplication_SubmissionSuccess(t *testing.T) {
 
 func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 	type testcase struct {
+		name                    string
 		appName                 string
 		oldAppStatus            v1beta2.ApplicationStateType
 		oldExecutorStatus       map[string]v1beta2.ExecutorState
@@ -967,6 +968,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 
 	testcases := []testcase{
 		{
+			name:                  appName,
 			appName:               appName,
 			oldAppStatus:          v1beta2.SubmittedState,
 			oldExecutorStatus:     map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorRunningState},
@@ -980,6 +982,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			},
 		},
 		{
+			name:              appName,
 			appName:           appName,
 			oldAppStatus:      v1beta2.SubmittedState,
 			oldExecutorStatus: map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorRunningState},
@@ -1021,6 +1024,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			},
 		},
 		{
+			name:              appName,
 			appName:           appName,
 			oldAppStatus:      v1beta2.RunningState,
 			oldExecutorStatus: map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorRunningState},
@@ -1076,6 +1080,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			},
 		},
 		{
+			name:              appName,
 			appName:           appName,
 			oldAppStatus:      v1beta2.RunningState,
 			oldExecutorStatus: map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorRunningState},
@@ -1133,6 +1138,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			},
 		},
 		{
+			name:              appName,
 			appName:           appName,
 			oldAppStatus:      v1beta2.RunningState,
 			oldExecutorStatus: map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorRunningState},
@@ -1191,6 +1197,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			},
 		},
 		{
+			name:              appName,
 			appName:           appName,
 			oldAppStatus:      v1beta2.RunningState,
 			oldExecutorStatus: map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorRunningState},
@@ -1254,6 +1261,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			},
 		},
 		{
+			name:              appName,
 			appName:           appName,
 			oldAppStatus:      v1beta2.RunningState,
 			oldExecutorStatus: map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorRunningState},
@@ -1314,6 +1322,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			},
 		},
 		{
+			name:                    appName,
 			appName:                 appName,
 			oldAppStatus:            v1beta2.FailingState,
 			oldExecutorStatus:       map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorFailedState},
@@ -1323,6 +1332,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			expectedExecutorMetrics: executorMetrics{},
 		},
 		{
+			name:              appName,
 			appName:           appName,
 			oldAppStatus:      v1beta2.RunningState,
 			oldExecutorStatus: map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorRunningState},
@@ -1364,6 +1374,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			},
 		},
 		{
+			name:                    appName,
 			appName:                 appName,
 			oldAppStatus:            v1beta2.SucceedingState,
 			oldExecutorStatus:       map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorCompletedState},
@@ -1373,6 +1384,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			expectedExecutorMetrics: executorMetrics{},
 		},
 		{
+			name:              appName,
 			appName:           appName,
 			oldAppStatus:      v1beta2.SubmittedState,
 			oldExecutorStatus: map[string]v1beta2.ExecutorState{},
@@ -1408,6 +1420,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			expectedExecutorMetrics: executorMetrics{},
 		},
 		{
+			name:              appName,
 			appName:           appName,
 			oldAppStatus:      v1beta2.CompletedState,
 			oldExecutorStatus: map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorPendingState},
@@ -1433,6 +1446,7 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			},
 		},
 		{
+			name:              appName,
 			appName:           appName,
 			oldAppStatus:      v1beta2.RunningState,
 			oldExecutorStatus: map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorRunningState},
@@ -1453,6 +1467,109 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 			expectedAppState:        v1beta2.RunningState,
 			expectedExecutorState:   map[string]v1beta2.ExecutorState{"exec-1": v1beta2.ExecutorUnknownState},
 			expectedAppMetrics:      metrics{},
+			expectedExecutorMetrics: executorMetrics{},
+		},
+		{
+			name:         appName,
+			appName:      appName,
+			oldAppStatus: v1beta2.SubmittedState,
+			oldExecutorStatus: map[string]v1beta2.ExecutorState{
+				"exec-1": v1beta2.ExecutorRunningState,
+				"exec-2": v1beta2.ExecutorRunningState,
+				"exec-3": v1beta2.ExecutorRunningState,
+				"exec-4": v1beta2.ExecutorRunningState,
+				"exec-5": v1beta2.ExecutorRunningState,
+			},
+			driverPod: &apiv1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      driverPodName,
+					Namespace: "test",
+					Labels: map[string]string{
+						config.SparkRoleLabel:    config.SparkDriverRole,
+						config.SparkAppNameLabel: appName,
+					},
+					ResourceVersion: "1",
+				},
+				Status: apiv1.PodStatus{
+					Phase: apiv1.PodRunning,
+				},
+			},
+			executorPod: &apiv1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "exec-6",
+					Namespace: "test",
+					Labels: map[string]string{
+						config.SparkRoleLabel:       config.SparkExecutorRole,
+						config.SparkAppNameLabel:    appName,
+						config.SparkExecutorIDLabel: "6",
+					},
+				},
+				Status: apiv1.PodStatus{
+					Phase: apiv1.PodPending,
+				},
+			},
+			expectedAppState: v1beta2.RunningState,
+			expectedExecutorState: map[string]v1beta2.ExecutorState{
+				"exec-1": v1beta2.ExecutorUnknownState,
+				"exec-2": v1beta2.ExecutorUnknownState,
+				"exec-3": v1beta2.ExecutorUnknownState,
+				"exec-4": v1beta2.ExecutorUnknownState,
+				"exec-5": v1beta2.ExecutorUnknownState,
+			},
+			expectedAppMetrics: metrics{
+				runningMetricCount: 1,
+			},
+			expectedExecutorMetrics: executorMetrics{},
+		},
+		{
+			name:         "when_executorsProcessingLimit_isSet_then_disableExecutorProcessing",
+			appName:      appName,
+			oldAppStatus: v1beta2.SubmittedState,
+			oldExecutorStatus: map[string]v1beta2.ExecutorState{
+				"exec-1": v1beta2.ExecutorRunningState,
+				"exec-2": v1beta2.ExecutorRunningState,
+				"exec-3": v1beta2.ExecutorRunningState,
+				"exec-4": v1beta2.ExecutorRunningState,
+			},
+			driverPod: &apiv1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      driverPodName,
+					Namespace: "test",
+					Labels: map[string]string{
+						config.SparkRoleLabel:    config.SparkDriverRole,
+						config.SparkAppNameLabel: appName,
+					},
+					ResourceVersion: "1",
+				},
+				Status: apiv1.PodStatus{
+					Phase: apiv1.PodRunning,
+				},
+			},
+			executorPod: &apiv1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "exec-5",
+					Namespace: "test",
+					Labels: map[string]string{
+						config.SparkRoleLabel:       config.SparkExecutorRole,
+						config.SparkAppNameLabel:    appName,
+						config.SparkExecutorIDLabel: "5",
+					},
+				},
+				Status: apiv1.PodStatus{
+					Phase: apiv1.PodPending,
+				},
+			},
+			expectedAppState: v1beta2.RunningState,
+			expectedExecutorState: map[string]v1beta2.ExecutorState{
+				"exec-1": v1beta2.ExecutorUnknownState,
+				"exec-2": v1beta2.ExecutorUnknownState,
+				"exec-3": v1beta2.ExecutorUnknownState,
+				"exec-4": v1beta2.ExecutorUnknownState,
+				"exec-5": v1beta2.ExecutorPendingState,
+			},
+			expectedAppMetrics: metrics{
+				runningMetricCount: 1,
+			},
 			expectedExecutorMetrics: executorMetrics{},
 		},
 	}
@@ -1506,7 +1623,9 @@ func TestSyncSparkApplication_ExecutingState(t *testing.T) {
 	}
 
 	for _, test := range testcases {
-		testFn(test, t)
+		t.Run(test.name, func(tt *testing.T) {
+			testFn(test, tt)
+		})
 	}
 }
 

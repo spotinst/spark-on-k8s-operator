@@ -43,6 +43,10 @@ func getSparkApplicationID(pod *apiv1.Pod) string {
 	return pod.Labels[config.SparkApplicationSelectorLabel]
 }
 
+func getSparkExecutorID(pod *apiv1.Pod) string {
+	return pod.Labels[config.SparkExecutorIDLabel]
+}
+
 func getDriverPodName(app *v1beta2.SparkApplication) string {
 	name := app.Spec.Driver.PodName
 	if name != nil && len(*name) > 0 {
