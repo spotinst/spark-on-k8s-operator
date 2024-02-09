@@ -18,6 +18,8 @@ ARG SPARK_IMAGE=gcr.io/spark-operator/spark:v3.1.1
 
 FROM golang:1.19.2-alpine as builder
 
+RUN apk update && apk add --no-cache libcap
+
 WORKDIR /workspace
 
 # Copy the Go Modules manifests
@@ -33,14 +35,18 @@ COPY pkg/ pkg/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o /usr/bin/spark-operator main.go
+RUN setcap cap_net_bind_service=+ep /usr/bin/spark-operator
 
 FROM ${SPARK_IMAGE}
 USER root
-COPY --from=builder /usr/bin/spark-operator /usr/bin/
 RUN apt-get update --allow-releaseinfo-change \
     && apt-get update \
     && apt-get install -y openssl curl tini \
     && rm -rf /var/lib/apt/lists/*
+
+USER 185
+
+COPY --from=builder /usr/bin/spark-operator /usr/bin/
 COPY hack/gencerts.sh /usr/bin/
 
 COPY entrypoint.sh /usr/bin/
