@@ -18,6 +18,8 @@ ARG SPARK_IMAGE=spark:3.5.0
 
 FROM golang:1.22.5 AS builder
 
+RUN apk update && apk add --no-cache libcap
+
 WORKDIR /workspace
 
 COPY . .
