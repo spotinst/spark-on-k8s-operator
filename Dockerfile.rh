@@ -22,7 +22,9 @@
 
 ARG SPARK_IMAGE=gcr.io/spark-operator/spark:v3.1.1
 
-FROM golang:1.14.0-alpine as builder
+FROM golang:1.20-alpine as builder
+
+RUN apk update && apk add --no-cache libcap
 
 WORKDIR /workspace
 
@@ -39,19 +41,27 @@ COPY pkg/ pkg/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o /usr/bin/spark-operator main.go
+RUN setcap cap_net_bind_service=+ep /usr/bin/spark-operator
 
 FROM ${SPARK_IMAGE}
-COPY --from=builder /usr/bin/spark-operator /usr/bin/
 USER root
+RUN yum install -y openssl \
+    && yum clean all \
+    && curl -fsSL "https://github.com/krallin/tini/releases/download/v0.19.0/tini-static-amd64" -o /sbin/tini \
+    && chmod +x /sbin/tini
 
 # Comment out the following three lines if you do not have a RedHat subscription.
-COPY hack/install_packages.sh /
-RUN --mount=target=/opt/spark/credentials,type=secret,id=credentials,required /install_packages.sh
-RUN rm /install_packages.sh
+# COPY hack/install_packages.sh /
+# RUN --mount=target=/opt/spark/credentials,type=secret,id=credentials,required /install_packages.sh
+# RUN rm /install_packages.sh
 
-RUN chmod -R u+x /tmp
+# RUN chmod -R u+x /tmp
 
-COPY hack/gencerts.sh /usr/bin/
-COPY entrypoint.sh /usr/bin/
 USER 185
+
+COPY --from=builder /usr/bin/spark-operator /usr/bin/
+COPY hack/gencerts.sh /usr/bin/
+
+COPY entrypoint.sh /usr/bin/
 ENTRYPOINT ["/usr/bin/entrypoint.sh"]
+
