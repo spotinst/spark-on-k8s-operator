@@ -5,8 +5,8 @@ VERSION = $(shell git rev-parse --short=7 HEAD)
 IMAGE_NAME = spark-operator
 SPARK_BASE_IMAGE = gcr.io/ocean-spark/spark:platform-3.4-gen20
 TAG = $(VERSION)-gen20
-SPARK_BASE_IMAGE_RH = public.ecr.aws/f4k1p1n4/spark:netapp-spark-support-image-3.5.0-hadoop-3.3.4-java-11-scala-2.13-ubi-9-python-3.10-rel20240308
-TAG_RH = $(VERSION)-ubi9-rel20240308
+SPARK_BASE_IMAGE_RH = public.ecr.aws/f4k1p1n4/spark:netapp-spark-support-image-v3.5-rel20240315
+TAG_RH = $(VERSION)-ubi9-rel20240315
 
 build_linux:
 	docker buildx build --load \
