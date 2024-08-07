@@ -18,7 +18,7 @@ ARG SPARK_IMAGE=spark:3.5.0
 
 FROM golang:1.22.5 AS builder
 
-RUN apk update && apk add --no-cache libcap
+RUN apt update && apt install libcap2 && apt clean
 
 WORKDIR /workspace
 
