@@ -114,7 +114,7 @@ func main() {
 		if err != nil {
 			glog.Fatal(err)
 		}
-		resourceLock, err := resourcelock.New(resourcelock.ConfigMapsLeasesResourceLock,
+		resourceLock, err := resourcelock.New("configmapsleases",
 			*leaderElectionLockNamespace,
 			*leaderElectionLockName,
 			kubeClient.CoreV1(),
