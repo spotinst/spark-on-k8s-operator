@@ -17,11 +17,10 @@ limitations under the License.
 package v1beta2
 
 import (
+	"github.com/kubeflow/spark-operator/pkg/apis/sparkoperator.k8s.io"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"github.com/GoogleCloudPlatform/spark-on-k8s-operator/pkg/apis/sparkoperator.k8s.io"
 )
 
 const Version = "v1beta2"

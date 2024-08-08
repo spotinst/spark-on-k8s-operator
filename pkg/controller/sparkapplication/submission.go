@@ -25,18 +25,24 @@ import (
 	"strings"
 
 	"github.com/golang/glog"
+	"github.com/kubeflow/spark-operator/pkg/apis/sparkoperator.k8s.io/v1beta2"
+	"github.com/kubeflow/spark-operator/pkg/config"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/kubernetes/pkg/apis/policy"
-
-	"github.com/GoogleCloudPlatform/spark-on-k8s-operator/pkg/apis/sparkoperator.k8s.io/v1beta2"
-	"github.com/GoogleCloudPlatform/spark-on-k8s-operator/pkg/config"
 )
 
 const (
 	sparkHomeEnvVar             = "SPARK_HOME"
 	kubernetesServiceHostEnvVar = "KUBERNETES_SERVICE_HOST"
 	kubernetesServicePortEnvVar = "KUBERNETES_SERVICE_PORT"
+)
+
+// Kubernetes volume types.
+const (
+	VolumeTypeEmptyDir              = "emptyDir"
+	VolumeTypeHostPath              = "hostPath"
+	VolumeTypeNFS                   = "nfs"
+	VolumeTypePersistentVolumeClaim = "persistentVolumeClaim"
 )
 
 // submission includes information of a Spark application to be submitted.
@@ -505,16 +511,16 @@ func buildLocalVolumeOptions(prefix string, volume v1.Volume, volumeMount v1.Vol
 	var options []string
 	switch {
 	case volume.HostPath != nil:
-		options = append(options, fmt.Sprintf(VolumeMountPathTemplate, string(policy.HostPath), volume.Name, volumeMount.MountPath))
-		options = append(options, fmt.Sprintf(VolumeMountOptionTemplate, string(policy.HostPath), volume.Name, "path", volume.HostPath.Path))
+		options = append(options, fmt.Sprintf(VolumeMountPathTemplate, VolumeTypeHostPath, volume.Name, volumeMount.MountPath))
+		options = append(options, fmt.Sprintf(VolumeMountOptionTemplate, VolumeTypeHostPath, volume.Name, "path", volume.HostPath.Path))
 		if volume.HostPath.Type != nil {
-			options = append(options, fmt.Sprintf(VolumeMountOptionTemplate, string(policy.HostPath), volume.Name, "type", *volume.HostPath.Type))
+			options = append(options, fmt.Sprintf(VolumeMountOptionTemplate, VolumeTypeHostPath, volume.Name, "type", *volume.HostPath.Type))
 		}
 	case volume.EmptyDir != nil:
-		options = append(options, fmt.Sprintf(VolumeMountPathTemplate, string(policy.EmptyDir), volume.Name, volumeMount.MountPath))
+		options = append(options, fmt.Sprintf(VolumeMountPathTemplate, VolumeTypeEmptyDir, volume.Name, volumeMount.MountPath))
 	case volume.PersistentVolumeClaim != nil:
-		options = append(options, fmt.Sprintf(VolumeMountPathTemplate, string(policy.PersistentVolumeClaim), volume.Name, volumeMount.MountPath))
-		options = append(options, fmt.Sprintf(VolumeMountOptionTemplate, string(policy.PersistentVolumeClaim), volume.Name, "claimName", volume.PersistentVolumeClaim.ClaimName))
+		options = append(options, fmt.Sprintf(VolumeMountPathTemplate, VolumeTypePersistentVolumeClaim, volume.Name, volumeMount.MountPath))
+		options = append(options, fmt.Sprintf(VolumeMountOptionTemplate, VolumeTypePersistentVolumeClaim, volume.Name, "claimName", volume.PersistentVolumeClaim.ClaimName))
 	}
 
 	return options

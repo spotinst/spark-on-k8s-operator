@@ -18,12 +18,11 @@ package batchscheduler
 
 import (
 	"fmt"
+	schedulerinterface "github.com/kubeflow/spark-operator/pkg/batchscheduler/interface"
+	"github.com/kubeflow/spark-operator/pkg/batchscheduler/volcano"
 	"sync"
 
 	"k8s.io/client-go/rest"
-
-	"github.com/GoogleCloudPlatform/spark-on-k8s-operator/pkg/batchscheduler/interface"
-	"github.com/GoogleCloudPlatform/spark-on-k8s-operator/pkg/batchscheduler/volcano"
 )
 
 type schedulerInitializeFunc func(config *rest.Config) (schedulerinterface.BatchScheduler, error)
