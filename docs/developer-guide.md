@@ -28,7 +28,7 @@ If you'd like to build/test the spark-operator locally, follow the instructions 
 ```bash
 $ mkdir -p $GOPATH/src/github.com/GoogleCloudPlatform
 $ cd $GOPATH/src/github.com/GoogleCloudPlatform
-$ git clone git@github.com:GoogleCloudPlatform/spark-on-k8s-operator.git
+$ git clone git@github.com:kubeflow/spark-operator.git
 $ cd spark-on-k8s-operator
 ```
 
