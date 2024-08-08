@@ -26,7 +26,7 @@ require (
 	k8s.io/kubectl v0.30.3
 	k8s.io/kubernetes v1.30.3
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
-	volcano.sh/volcano v1.1.0
+	volcano.sh/apis v1.1.0
 )
 
 require (
@@ -56,7 +56,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
 	github.com/googleapis/gax-go/v2 v2.11.0 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190212212710-3befbb6ad0cc // indirect
-	github.com/imdario/mergo v0.3.7 // indirect
+	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
