@@ -26,7 +26,7 @@ require (
 	k8s.io/kubectl v0.30.3
 	k8s.io/kubernetes v1.30.3
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
-	volcano.sh/volcano v1.1.0
+	volcano.sh/apis v1.10.0-alpha.0
 )
 
 require (
