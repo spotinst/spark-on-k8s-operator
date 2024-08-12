@@ -38,7 +38,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
 
 	"github.com/kubeflow/spark-operator/pkg/batchscheduler"
@@ -114,15 +113,13 @@ func main() {
 		if err != nil {
 			glog.Fatal(err)
 		}
-		resourceLock, err := resourcelock.New(resourcelock.ConfigMapsLeasesResourceLock,
+		resourceLock, err := resourcelock.New(resourcelock.LeasesResourceLock,
 			*leaderElectionLockNamespace,
 			*leaderElectionLockName,
 			kubeClient.CoreV1(),
 			kubeClient.CoordinationV1(),
 			resourcelock.ResourceLockConfig{
 				Identity: hostname,
-				// TODO: This is a workaround for a nil dereference in client-go. This line can be removed when that dependency is updated.
-				EventRecorder: &record.FakeRecorder{},
 			})
 		if err != nil {
 			glog.Fatal(err)
