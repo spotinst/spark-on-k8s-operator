@@ -26,8 +26,8 @@ $ docker build -t <image-tag> -f Dockerfile.rh .
 If you'd like to build/test the spark-operator locally, follow the instructions below:
 
 ```bash
-$ mkdir -p $GOPATH/src/github.com/GoogleCloudPlatform
-$ cd $GOPATH/src/github.com/GoogleCloudPlatform
+$ mkdir -p $GOPATH/src/github.com/kubeflow
+$ cd $GOPATH/src/github.com/kubeflow
 $ git clone git@github.com:kubeflow/spark-operator.git
 $ cd spark-on-k8s-operator
 ```

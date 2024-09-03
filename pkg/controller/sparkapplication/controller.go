@@ -81,6 +81,7 @@ type Controller struct {
 	enableUIService          bool
 	disableExecutorReporting bool
 	executorsProcessingLimit int
+	submissionCache          *SubmissionCache
 }
 
 // NewController creates a new Controller.
@@ -139,6 +140,7 @@ func newSparkApplicationController(
 		enableUIService:          enableUIService,
 		disableExecutorReporting: disableExecutorReporting,
 		executorsProcessingLimit: executorsProcessingLimit,
+		submissionCache:          NewSubmissionCache(5 * time.Minute),
 	}
 
 	if metricsConfig != nil {
@@ -566,7 +568,17 @@ func (c *Controller) syncSparkApplication(key string) error {
 			appCopy.Status.AppState.State = v1beta2.FailedState
 			appCopy.Status.AppState.ErrorMessage = err.Error()
 		} else {
-			appCopy = c.submitSparkApplication(appCopy)
+			// related to ofas, we received 2 times the CRD events with NewState state
+			// we need to check if the submission was already done
+			// and skip the submission if it was already done
+			if !c.submissionCache.Exist(key) {
+				appCopy = c.submitSparkApplication(appCopy)
+				// whatever the result of the submission, we don't want to retry the submission
+				c.submissionCache.Set(key)
+			} else {
+				glog.V(2).Infof("submission attempt already done for: %q, skip it", key)
+				return nil
+			}
 		}
 	case v1beta2.SucceedingState:
 		if !shouldRetry(appCopy) {

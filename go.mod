@@ -9,6 +9,7 @@ require (
 	github.com/golang/glog v1.2.1
 	github.com/google/go-cloud v0.1.1
 	github.com/google/uuid v1.6.0
+	github.com/jellydator/ttlcache/v3 v3.2.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.19.1
