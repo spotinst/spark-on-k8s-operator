@@ -7,7 +7,7 @@ on:
 env:
   PUBLIC_ECR: public.ecr.aws/ocean-spark
   IMAGE_NAME: spark-operator
-  IMAGE_TAG: main
+  IMAGE_TAG: ocean-spark
 
 jobs:
   public-ecr-scan:
