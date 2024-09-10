@@ -1,0 +1,90 @@
+name: Trivy image scanning
+on:
+  workflow_dispatch:
+  schedule:
+  - cron: '0 0 * * 1'
+
+env:
+  PUBLIC_ECR: public.ecr.aws/ocean-spark
+  IMAGE_NAME: spark-operator
+  IMAGE_TAG: ocean-spark
+
+jobs:
+  public-ecr-scan:
+    runs-on: ubuntu-latest
+    name: scan
+    steps:
+      - name: trivy scan for github security tab
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: '${{ env.PUBLIC_ECR }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}'
+          format: 'sarif'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          output: 'trivy-results-public.sarif'
+          timeout: 30m0s
+
+      - name: Check for HIGH or CRITICAL vulnerabilities
+        id: check-vuln
+        run: |
+          if grep -q 'CRITICAL\|HIGH' trivy-results-public.sarif; then
+            echo "::set-output name=highOrCriticalFound::true"
+            echo "High or Critical vulnerabilities found, creating JIRA ticket"
+          else
+            echo "::set-output name=highOrCriticalFound::false"
+            echo "No High or Critical vulnerabilities found, skipping JIRA ticket creation"
+          fi
+
+      - name: Login
+        if: steps.check-vuln.outputs.highOrCriticalFound == 'true'
+        uses: atlassian/gajira-login@v3
+        env:
+          JIRA_BASE_URL: "https://spotinst.atlassian.net"
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+
+      - name: trivy scan for jira tracking
+        if: steps.check-vuln.outputs.highOrCriticalFound == 'true'
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: '${{ env.PUBLIC_ECR }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}'
+          format: template
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          template: "@/contrib/html.tpl"
+          output:  trivy-report.html
+          timeout: 30m0s
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results-public.sarif'
+
+      - name: Get current date
+        if: steps.check-vuln.outputs.highOrCriticalFound == 'true'
+        id: date
+        run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
+
+      - name: Create JIRA ticket
+        if: steps.check-vuln.outputs.highOrCriticalFound == 'true'
+        id: jira-ticket
+        uses: atlassian/gajira-create@v3
+        with:
+          project: BGD
+          issuetype: Task
+          summary: |
+            [Scan of ${{ steps.date.outputs.date }}] fix vulnerabilities discovered in ${{ env.IMAGE_NAME }}.
+          fields: '{"customfield_10028": "Fix issues in ${{ env.IMAGE_NAME }} image, see report attached for more details", "customfield_10026": "Updated version of ${{ env.IMAGE_NAME }} image", "labels":["INFRASTRUCTURE","VULNERABILITIES","DEVOPS"]}'
+
+      - name: Attach Trivy scan html results to JIRA ticket
+        if: steps.check-vuln.outputs.highOrCriticalFound == 'true'
+        env:
+          JIRA_API_URL: "https://spotinst.atlassian.net/rest/api/3/issue/${{ steps.jira-ticket.outputs.issue }}/attachments"
+          JIRA_ENCODED_API_TOKEN: ${{ secrets.JIRA_ENCODED_API_TOKEN }}
+        run: |
+          curl -X POST $JIRA_API_URL \
+          -H 'Authorization: Basic ${{ secrets.JIRA_ENCODED_API_TOKEN }}' \
+          -H 'X-Atlassian-Token: no-check' \
+          -H 'Accept: application/json'  \
+          --form 'file=@trivy-report.html'
