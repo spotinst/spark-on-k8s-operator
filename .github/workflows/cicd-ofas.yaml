@@ -1,0 +1,105 @@
+name: CICD
+on:
+  push:
+    branches:
+      - ocean-spark-v2
+  pull_request:
+    branches:
+      - ocean-spark-v2
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run go mod tidy
+        run: |
+          go mod tidy
+          if ! git diff --quiet; then
+            echo "Please run 'go mod tidy' and commit the changes."
+            git diff
+            false
+          fi
+
+      - name: Generate code
+        run: |
+          make generate
+          if ! git diff --quiet; then
+            echo "Need to re-run 'make generate' and commit the changes."
+            git diff
+            false
+          fi
+
+      - name: Run go fmt check
+        run: |
+          make go-fmt
+          if ! git diff --quiet; then
+            echo "Need to re-run 'make go-fmt' and commit the changes."
+            git diff
+            false
+          fi
+
+      - name: Run go vet check
+        run: |
+          make go-vet
+          if ! git diff --quiet; then
+            echo "Need to re-run 'make go-vet' and commit the changes."
+            git diff
+            false
+          fi
+
+      - name: Run golangci-lint
+        run: |
+          make go-lint
+
+      - name: Run unit tests
+        run: make unit-test
+
+  cd-dev-archi:
+    needs: [ci]
+    runs-on: ubuntu-latest
+    environment: dev
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
+
+    steps:
+      - if: ${{ github.event_name != 'pull_request' }}
+        uses: actions/checkout@v4
+
+      - if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: release to dev
+        uses: ./.github/ocean-spark/actions/release
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          public-registry-id: n8e8v3t5
+
+  cd-prod:
+    if: ${{ github.event_name != 'pull_request' }}
+    needs: [cd-dev]
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: release to prod
+        uses: ./.github/ocean-spark/actions/release
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          public-registry-id: f4k1p1n4
