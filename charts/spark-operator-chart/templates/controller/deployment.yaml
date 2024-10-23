@@ -64,12 +64,13 @@ spec:
         {{- end }}
         {{- end }}
         - --controller-threads={{ .Values.controller.workers }}
-        {{- with .Values.controller.uiService.enable }}
-        - --enable-ui-service=true
-        {{- end }}
+        - --enable-ui-service={{ .Values.controller.uiService.enable }}
         {{- if .Values.controller.uiIngress.enable }}
         {{- with .Values.controller.uiIngress.urlFormat }}
         - --ingress-url-format={{ . }}
+        {{- end }}
+        {{- with .Values.controller.uiIngress.ingressClassName }}
+        - --ingress-class-name={{ . }}
         {{- end }}
         {{- end }}
         {{- if .Values.controller.batchScheduler.enable }}
