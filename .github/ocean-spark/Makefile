@@ -28,7 +28,7 @@ push-manifest:
 		$(REGISTRY)$(IMAGE_NAME):${BRANCH}-amd64 \
 		$(REGISTRY)$(IMAGE_NAME):${BRANCH}-arm64
 	docker manifest push $(REGISTRY)$(IMAGE_NAME):${BRANCH}
-	@if [ "$(BRANCH)" == "ocean-spark-v2" ]; then \
+	@if [ "$(BRANCH)" = "ocean-spark-v2" ]; then \
 		docker manifest create $(REGISTRY)$(IMAGE_NAME):$(TAG) \
 			$(REGISTRY)$(IMAGE_NAME):$(TAG)-amd64 \
 			$(REGISTRY)$(IMAGE_NAME):$(TAG)-arm64; \
