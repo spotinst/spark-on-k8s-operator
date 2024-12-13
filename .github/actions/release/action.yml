@@ -2,11 +2,8 @@ name: 'Release Action'
 description: 'Build and Push the application docker image'
 
 inputs:
-    aws-access-key-id:
-      description: 'AWS Access Key ID'
-      required: true
-    aws-secret-access-key:
-      description: 'AWS Secret Access Key'
+    aws-role-to-assume:
+      description: 'AWS Role to Assume'
       required: true
     public-registry-id:
       description: 'Public ECR Registry ID'
@@ -22,12 +19,17 @@ runs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
 
+    - name: configure aws credentials
+      uses: aws-actions/configure-aws-credentials@v1.7.0
+      with:
+        role-to-assume: ${{ inputs.aws-role-to-assume }}
+        role-session-name: ${{ inputs.aws-role-session-name }}
+        aws-region: us-east-1
+
     - name: Login to Amazon ECR
-      uses: docker/login-action@v1
+      uses: docker/login-action@v3
       with:
         registry: public.ecr.aws
-        username: ${{ inputs.aws-access-key-id }}
-        password: ${{ inputs.aws-secret-access-key }}
 
     - name: Build images
       run: make -f .github/actions/release/Makefile build
