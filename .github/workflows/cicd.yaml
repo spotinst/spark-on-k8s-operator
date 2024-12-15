@@ -8,6 +8,11 @@ on:
       - ocean-spark
 
 
+permissions:
+  contents: read
+  pull-requests: read
+  id-token: write
+
 jobs:
   ci:
     runs-on: ubuntu-latest
@@ -41,8 +46,8 @@ jobs:
       - name: release to dev
         uses: ./.github/actions/release
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-role-session-name: ${{ secrets.AWS_ROLE_SESSION_NAME }}
           public-registry-id: n8e8v3t5
 
   cd-prod:
@@ -56,6 +61,6 @@ jobs:
       - name: release to prod
         uses: ./.github/actions/release
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-role-session-name: ${{ secrets.AWS_ROLE_SESSION_NAME }}
           public-registry-id: f4k1p1n4
